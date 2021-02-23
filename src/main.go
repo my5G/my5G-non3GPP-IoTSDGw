@@ -86,7 +86,7 @@ func main() {
         }
     }
 
-    stringAddrBR := "31.220.52.116:1700"
+    stringAddrBR := "10.200.200.11:1700" //IP do APP Server
     serverAddr,err := net.ResolveUDPAddr("udp", stringAddrBR)
     checkError(err)
 
