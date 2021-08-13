@@ -10,3 +10,7 @@ build/*
 
 # goop - go package manager
 .vendor
+
+.emacs.desktop
+.idea/
+.gitignore

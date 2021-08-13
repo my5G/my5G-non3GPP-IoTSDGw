@@ -1,16 +1,63 @@
 package main
 
 import (
-	"fmt"
-	"net"
+    "fmt"
+    "github.com/my5G/my5G-non3GPP-IoTSDGw/simulator/context"
+    "github.com/my5G/my5G-non3GPP-IoTSDGw/simulator/udp_server"
+    "github.com/urfave/cli"
+    "log"
     "os"
+    "sync"
     "time"
-	"encoding/hex"
-
 )
 
+const (
+    ChannelsUpLinksNumber = 8
+)
 
+var (
+    InfoLogger *log.Logger
+    ErrorLogger *log.Logger
+    WarningLogger *log.Logger
+    channelFlag int
+    numPackets int
+    config *Config
+    wg sync.WaitGroup
+    now = time.Now()
+)
 
+var commandsCLi = []cli.Flag{
+    cli.StringFlag{
+        Name: "ipv4",
+        Usage: "IOTSDW Forwarder ipv4 binding address",
+
+    },
+    cli.IntFlag{
+        Name: "port",
+        Usage: "IOTSDW Forwarder Server UDP binding port",
+    },
+    cli.IntFlag{
+        Name: "dev",
+        Usage: "IOTSDW Forwarder number of devices",
+    },
+    cli.IntFlag{
+        Name: "packets",
+        Usage: "IOTSDW Forwarder lenth packets per device",
+    },
+}
+
+type Config struct {
+    ipv4 string
+    port int
+    numDevices int
+    packetPerDevices int
+}
+
+func init (){
+    InfoLogger = log.New(os.Stdout ,"Info: ", log.Ldate|log.Ltime|log.Lshortfile)
+    ErrorLogger = log.New(os.Stdout ,"Warning: ", log.Ldate|log.Ltime|log.Lshortfile)
+    WarningLogger = log.New(os.Stdout ,"Error: ", log.Ldate|log.Ltime|log.Lshortfile)
+}
 
 /* A Simple function to verify error */
 func checkError(err error) {
@@ -20,57 +67,122 @@ func checkError(err error) {
     }
 }
 
+func Initialize(){
 
-
-
-func main() {
-
-
-
-s :="0205f50000000000000000017b227278706b223a5b7b2274696d65223a22323032312d30322d31375430383a30383a33302d30333a3030222c22746d6d73223a393232333337323839302c22746d7374223a393232333337322c226368616e223a302c2272666368223a312c2266726571223a3931362e382c2273746174223a312c226d6f6475223a224c4f5241222c2264617472223a225346374257313235222c22636f6472223a22342f35222c2272737369223a2d35372c226c736e72223a372c2273697a65223a31342c2264617461223a22514145414141414141674143347841393846383d227d5d7d"
-
-data, err := hex.DecodeString(s)
-
-s="0245f40000000000000000017b227278706b223a5b7b2274696d65223a22323032312d30322d31375430383a31303a33342d30333a3030222c22746d6d73223a393232333337323839302c22746d7374223a393232333337322c226368616e223a302c2272666368223a312c2266726571223a3931362e382c2273746174223a312c226d6f6475223a224c4f5241222c2264617472223a225346374257313235222c22636f6472223a22342f35222c2272737369223a2d35372c226c736e72223a372c2273697a65223a31342c2264617461223a225141494141414141425141437a4779716849383d227d5d7d"
-
-data1, err := hex.DecodeString(s)
-
-s="0274410000000000000000017b2273746174223a7b2274696d65223a22323032312d30322d31372031313a31393a343920474d54222c226c617469223a2d32392e37393434342c226c6f6e67223a2d35312e31353338392c22616c7469223a32382c2272786e62223a302c2272786f6b223a302c2272786677223a302c2261636b72223a302e302c2264776e62223a302c2274786e62223a307d7d"
-
-data2, err := hex.DecodeString(s)
-
-
-
-    stringAddrGW := ":1680"
-    serverAddr,err := net.ResolveUDPAddr("udp", stringAddrGW)
-    checkError(err)
-
-    conn, err := net.DialUDP("udp",nil, serverAddr)
-    checkError(err)
-    
-    for{
-        _,err := conn.Write(data)
-        checkError(err)
-        fmt.Printf("Data %s was sent \n", data)
-
-        //registerData := make([]byte,2048)
-        //n, remoteAddr, err := conn.ReadFromUDP(registerData)
-        //checkError(err)
-        //fmt.Printf("Data %s was received from %s\n", registerData[:n], remoteAddr)
-
-        _,err = conn.Write(data1)
-        checkError(err)
-        fmt.Printf("Data %s was sent \n", data1)
-
-
-        _,err = conn.Write(data2)
-        checkError(err)
-        fmt.Printf("Data %s was sent \n", data2)
-        time.Sleep(5 * time.Second)
-
-
-  
+    //make new  Socker Port
+    ok :=context.DevicesContext_Self().ConfigSocketUDPAddr(config.ipv4,config.port)
+    if !ok {
+        ErrorLogger.Println("Socket Bind Error")
+        return
     }
+
+    InfoLogger.Println("Initializing UDP Server Network")
+    go udp_server.Run()
+
+    InfoLogger.Println("Create Devices for simulator Network")
+    context.CreateDevicesForSimulate(config.numDevices) // make 100 0 devices
+
+    InfoLogger.Println("Run Simulator")
+    run_simulator()
 
 }
 
+func runDevices(i int, w *sync.WaitGroup){
+
+    defer w.Done()
+
+    device, ok := context.DevicesContext_Self().DeviceLoad(uint16(i))
+    if !ok {
+        ErrorLogger.Println("Device id not Found")
+        os.Exit(0)
+    }
+
+    for flag := 0; flag < config.packetPerDevices; flag++ {
+        newPayload, ok := device.MakeNewPayload()
+        if !ok {
+            panic("Error msg encode Device #{flag} and packet #{flag}")
+        }
+
+        fmt.Printf("%s\n\n\n", newPayload)
+
+        channelId := udp_server.CycleChannel()
+
+        device.FsmState = context.FSM_SEND
+        InfoLogger.Printf("Send message device %d packet %d ",i , flag )
+        device.Packet_tx++
+        udp_server.SendChannelMessage(newPayload, channelId)
+        device.FsmState = context.FSM_WAIT
+
+        /* Timeout */
+        done := make(chan bool)
+        go func(){
+            for{
+                if device.FsmState == context.FSM_RECV{
+                    done <- true
+                    return
+                }
+                if  false == <-done {
+                    return
+                }
+            }
+        }()
+
+        select {
+        case <-done:
+            device.FsmState = context.FSM_IDLE
+        case <-time.After(5):
+            done <- false
+        }
+
+    }// End of For
+}
+
+func run_simulator(){
+    //total_cycle := numPacketPerDev * numDev
+
+
+    for i := 1; i <= config.numDevices; i++ {
+        wg.Add(1)
+        go runDevices(i, &wg)
+    }
+}
+
+func action(c * cli.Context) error{
+    config = &Config{
+        ipv4: c.String("ipv4"),
+        port: c.Int("port"),
+        numDevices: c.Int("dev"),
+        packetPerDevices: c.Int("packets"),
+    }
+    return nil
+}
+
+func main(){
+    app := cli.NewApp()
+    app.Name = "IoTSDGW LoRa Simulator"
+    app.Usage = "Usage: -ipv4 {IOTSdw Forwarder} -port {UDP port}"
+    app.Action = action
+    app.Flags = commandsCLi
+    if err := app.Run(os.Args); err != nil {
+        log.Fatal("UE Run error: %v", err)
+    }
+
+    if config.ipv4 == ""{
+       config.ipv4="127.0.0.1"
+    }
+
+    if config.port == 0 {
+        config.port = 1680 // Config set default port lorawan bridge
+    }
+
+    if config.numDevices  <= 0 {
+        config.numDevices = 1 // Config set default port lorawan bridge
+    }
+
+    if config.packetPerDevices <=  0 {
+        config.packetPerDevices = 1// Config set default port lorawan bridge
+    }
+
+    Initialize()
+    wg.Wait()
+}
