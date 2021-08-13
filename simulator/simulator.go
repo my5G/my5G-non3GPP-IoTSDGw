@@ -140,7 +140,6 @@ func runDevices(i int, w *sync.WaitGroup){
 func run_simulator(){
     //total_cycle := numPacketPerDev * numDev
 
-
     for i := 1; i <= config.numDevices; i++ {
         wg.Add(1)
         go runDevices(i, &wg)
