@@ -3,83 +3,28 @@ package context
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"strconv"
-	"strings"
-	"time"
 )
 
-var idDev uint16
-
-// CompactTime implements time.Time but (un)marshals to and from
-// ISO 8601 'compact' format.
-type CompactTime time.Time
-
-// MarshalJSON implements the json.Marshaler interface.
-func (t CompactTime) MarshalJSON() ([]byte, error) {
-	return []byte(time.Time(t).UTC().Format(`"` + time.RFC3339Nano + `"`)), nil
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (t *CompactTime) UnmarshalJSON(data []byte) error {
-	t2, err := time.Parse(`"`+time.RFC3339Nano+`"`, string(data))
-	if err != nil {
-		return err
-	}
-	*t = CompactTime(t2)
-	return nil
-}
-
-// DatR implements the data rate which can be either a string (LoRa identifier)
-// or an unsigned integer in case of FSK (bits per second).
-type DatR struct {
-	LoRa string
-	FSK  uint32
-}
-
-// MarshalJSON implements the json.Marshaler interface.
-func (d DatR) MarshalJSON() ([]byte, error) {
-	if d.LoRa != "" {
-		return []byte(`"` + d.LoRa + `"`), nil
-	}
-	return []byte(strconv.FormatUint(uint64(d.FSK), 10)), nil
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (d *DatR) UnmarshalJSON(data []byte) error {
-	i, err := strconv.ParseUint(string(data), 10, 32)
-	if err != nil {
-		d.LoRa = strings.Trim(string(data), `"`)
-		return nil
-	}
-	d.FSK = uint32(i)
-	return nil
-}
-
-// RXPK contain a RF packet and associated metadata.
-type RXPK struct {
-	Time CompactTime `json:"time"` // UTC time of pkt RX, us precision, ISO 8601 'compact' format (e.g. 2013-03-31T16:21:17.528002Z)
-	Tmst uint32      `json:"tmst"` // Internal timestamp of "RX finished" event (32b unsigned)
-	Freq float64     `json:"freq"` // RX central frequency in MHz (unsigned float, Hz precision)
-	Chan uint8       `json:"chan"` // Concentrator "IF" channel used for RX (unsigned integer)
-	RFCh uint8       `json:"rfch"` // Concentrator "RF chain" used for RX (unsigned integer)
-	Stat int8        `json:"stat"` // CRC status: 1 = OK, -1 = fail, 0 = no CRC
-	Modu string      `json:"modu"` // Modulation identifier "LORA" or "FSK"
-	DatR DatR        `json:"datr"` // LoRa datarate identifier (eg. SF12BW500) || FSK datarate (unsigned, in bits per second)
-	CodR string      `json:"codr"` // LoRa ECC coding rate identifier
-	RSSI int16       `json:"rssi"` // RSSI in dBm (signed integer, 1 dB precision)
-	LSNR float64     `json:"lsnr"` // Lora SNR ratio in dB (signed float, 0.1 dB precision)
-	Size uint16      `json:"size"` // RF packet payload size in bytes (unsigned integer)
-	Data string      `json:"data"` // Base64 encoded RF packet payload, padded
-}
-
-
+const (
+	DefaultTime = "2021-02-17T08:08:30-03:00"
+	DefaultTmms = 9223372890
+	DefaultTmst = 9223372
+	DefaultChan = 0
+	DefaultRfch = 1
+	DefaultFreq = 916.8
+	DefaultStat = 1
+	DefaultModu = "LORA"
+	DefaultDatr = "SF7BW125"
+	DefaultCodr = "4/5"
+	DefaultRssi = -57
+	DefaultLsnr = 7
+)
 const(
 	FSM_IDLE = iota
 	FSM_SEND
 	FSM_WAIT
 	FSM_RECV
 )
-
 const (
 	PacketType string = "02"
 	Payload string = "0000000000000000017b227278706b223a5b7b2274696d65223a22323032312d30322d31375430383a30383a33302d3033" +
@@ -89,12 +34,31 @@ const (
 		"1414141674143347841393846383d227d5d7d"
 )
 
+type MessageFormat struct {
+	Rxpk []struct {
+		Time string  `json:"time"`
+		Tmms uint32  `json:"tmms"`
+		Tmst int  `json:"tmst"`
+		Chan uint8   `json:"chan"`
+		Rfch uint8   `json:"rfch"`
+		Freq float64 `json:"freq"`
+		Stat int8     `json:"stat"`
+		Modu string  `json:"modu"`
+		Datr string  `json:"datr"`
+		Codr string  `json:"codr"`
+		Rssi int16   `json:"rssi"`
+		Lsnr float64  `json:"lsnr"`
+		Size uint16   `json:"size"`
+		Data string  `json:"data"`
+	} `json:"rxpk"`
+}
+
+var idDev uint16
+
 //
 // Pega o json avbri o data
 /// Converte do base 64 para hex
 // Alterar os bytes os bites
-
-
 func init(){
 	idDev = 0
 }
