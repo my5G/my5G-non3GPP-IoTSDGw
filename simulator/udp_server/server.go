@@ -29,7 +29,8 @@ type UDPSendInfoGroup struct  {
 }
 
 type sendMessage struct {
-	DstAddr *net.UDPAddr
+	//DstAddr *net.UDPAddr
+	//gateway *context.Gateway
 	Payload []byte
 	Length int
 }
@@ -58,24 +59,22 @@ func RecvMessage(msg recvMessage) {
 }
 
 func Run (){
-
-	link := context.DevicesContext_Self().ForwarderConn
-
-	/*
-	listenerPortDownlink, err := net.ListenUDP("udp", link)
+	downlink := context.DevicesContext_Self().Gateway.Downlink
+	listenerPortDownlink, err := net.ListenUDP("udp", downlink)
 	if err != nil {
-		log.Fatalf("[IKE] Listen on UDP socket failed: %+v", err)
+		log.Fatalf("Listen on UDP socket failed: %+v", err)
 		return
 	}
-	*/
-	dialUplistenerPort, err := net.DialUDP("udp",nil, link)
+
+	uplink := context.DevicesContext_Self().Gateway.Uplink
+	dialUplistenerPort, err := net.DialUDP("udp",nil, uplink)
 	if err != nil {
 			log.Fatalf(" Listen on UDP socket failed: %+v", err)
 			return
 	}
 
 	//Maybe syn all go routines
-	//go reader (ChannelIDRecv, listenerPortDownlink)
+	go reader (ChannelIDRecv, listenerPortDownlink)
 	go sender (ChannelID1, dialUplistenerPort)
 	go sender (ChannelID2, dialUplistenerPort)
 	go sender (ChannelID3, dialUplistenerPort)
@@ -168,14 +167,14 @@ func sender(channelID int, conn *net.UDPConn) {
 
 				if n != sendData.Length {
 					//Make warn
-					log.Printf("[IKE] There is data not being sent\n")
+					log.Printf("There is data not being sent\n")
 				}
 
 			case ChannelID5:
 				sendData := <-ChannelForward05
 				n, err := conn.Write(sendData.Payload)
 				if err != nil {
-					log.Fatal("[IKE] Sending data through UDP failed: %+v", err)
+					log.Fatal("Sending data through UDP failed: %+v", err)
 				}
 
 				if n != sendData.Length {

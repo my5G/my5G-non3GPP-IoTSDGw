@@ -23,7 +23,7 @@ var (
     numPackets int
     config *Config
     wg sync.WaitGroup
-    now = time.Now()
+    now = time.Now
 )
 
 var commandsCLi = []cli.Flag{
@@ -33,8 +33,13 @@ var commandsCLi = []cli.Flag{
 
     },
     cli.IntFlag{
-        Name: "port",
-        Usage: "IOTSDW Forwarder Server UDP binding port",
+        Name: "portUp",
+        Usage: "IOTSDW Forwarder Server UDP binding port for upLink",
+    },
+
+    cli.IntFlag{
+        Name: "portDown",
+        Usage: "IOTSDW Forwarder Server UDP binding port for downLink",
     },
     cli.IntFlag{
         Name: "dev",
@@ -48,7 +53,8 @@ var commandsCLi = []cli.Flag{
 
 type Config struct {
     ipv4 string
-    port int
+    portUp int
+    portDown int
     numDevices int
     packetPerDevices int
 }
@@ -70,9 +76,16 @@ func checkError(err error) {
 func Initialize(){
 
     //make new  Socker Port
-    ok :=context.DevicesContext_Self().ConfigSocketUDPAddr(config.ipv4,config.port)
+    ok :=context.DevicesContext_Self().ConfigSocketUDPAddr(config.ipv4,config.portDown)
     if !ok {
-        ErrorLogger.Println("Socket Bind Error")
+        ErrorLogger.Println("Socket Bind Downlink  Error")
+        return
+    }
+
+    //make new  Socker Port
+    ok =context.DevicesContext_Self().ConfigUplink(config.ipv4,config.portUp)
+    if !ok {
+        ErrorLogger.Println("Socket Bind Up  Error")
         return
     }
 
@@ -80,11 +93,10 @@ func Initialize(){
     go udp_server.Run()
 
     InfoLogger.Println("Create Devices for simulator Network")
-    context.CreateDevicesForSimulate(config.numDevices) // make 100 0 devices
+    context.CreateDevicesForSimulate(config.numDevices) // make 1000 devices
 
     InfoLogger.Println("Run Simulator")
     run_simulator()
-
 }
 
 func runDevices(i int, w *sync.WaitGroup){
@@ -98,19 +110,24 @@ func runDevices(i int, w *sync.WaitGroup){
     }
 
     for flag := 0; flag < config.packetPerDevices; flag++ {
-        newPayload, ok := device.MakeNewPayload()
+
+        device.SetMessagePayload(fmt.Sprintf("Hello Device %d ", device.DevId))
+        phyLoRaPayload, ok := device.Marshall()
         if !ok {
             panic("Error msg encode Device #{flag} and packet #{flag}")
+            return
         }
 
-        fmt.Printf("%s\n\n\n", newPayload)
+        fmt.Printf("%s\n\n\n", phyLoRaPayload)
 
         channelId := udp_server.CycleChannel()
-
         device.FsmState = context.FSM_SEND
         InfoLogger.Printf("Send message device %d packet %d ",i , flag )
         device.Packet_tx++
-        udp_server.SendChannelMessage(newPayload, channelId)
+        device.Start = now()
+
+        udp_server.SendChannelMessage(phyLoRaPayload, device.GetDevID(),  channelId)
+
         device.FsmState = context.FSM_WAIT
 
         /* Timeout */
@@ -131,6 +148,7 @@ func runDevices(i int, w *sync.WaitGroup){
         case <-done:
             device.FsmState = context.FSM_IDLE
         case <-time.After(5):
+            device.FsmState = context.FSM_IDLE
             done <- false
         }
 
@@ -149,7 +167,8 @@ func run_simulator(){
 func action(c * cli.Context) error{
     config = &Config{
         ipv4: c.String("ipv4"),
-        port: c.Int("port"),
+        portUp: c.Int("portUp"),
+        portDown: c.Int("portDown"),
         numDevices: c.Int("dev"),
         packetPerDevices: c.Int("packets"),
     }
@@ -170,8 +189,12 @@ func main(){
        config.ipv4="127.0.0.1"
     }
 
-    if config.port == 0 {
-        config.port = 1680 // Config set default port lorawan bridge
+    if config.portUp == 0 {
+        config.portUp = 1680 // Config set default port lorawan bridge
+    }
+
+    if config.portDown == 0 {
+        config.portDown = 1690 // Config set default port lorawan bridge
     }
 
     if config.numDevices  <= 0 {

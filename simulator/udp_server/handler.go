@@ -1,7 +1,6 @@
 package udp_server
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/my5G/my5G-non3GPP-IoTSDGw/simulator/context"
 	"log"
@@ -28,12 +27,25 @@ func CycleChannel() int {
 	return channelFlag
 }
 
-func SendChannelMessage(msg []byte, channelID int) {
+func SendChannelMessage(packet []byte, tokenId string, channelID int) {
+
+	gateway := context.DevicesContext_Self().Gateway
+
+	message, err := gateway.NewUplinkEventHandler(
+		packet,
+		context.WithProtocolVersion("02"),
+		context.WithRandomToken(tokenId),
+		context.WithIndetifier(0),
+		context.WithMac(gateway.MAC),
+		)
+
+	if err != nil {
+		log.Fatalf("Packet gateway channel %d make errror %v", channelID, err)
+	}
 
 	chanMsg := sendMessage {
-		context.DevicesContext_Self().ForwarderConn,
-		msg,
-		len(msg),
+		message,
+		len(message),
 	}
 
 	switch channelID {
@@ -71,15 +83,15 @@ func HandleRecvMessage(){
 	}
 }
 
-func Dispatch( packet []byte){
+func Dispatch(payload []byte){
 
-	var code string
-	if err := json.Unmarshal(packet, &code); err != nil {
-		log.Fatal("Error Decode Json Packet")
-		return
-	}
-
-	fmt.Printf("%s\n", code )
+	//gateway := context.DevicesContext_Self().Gateway
+	//ok := gateway.Unmarshall(payload)
+	//if !ok {
+	//  log.Fatalf("Error message unmarshall ")
+	//	return
+	//}
+	//fmt.Printf("%s\n", code )
 	// Vem como 04 hexadecimal
 	var id uint16
 
@@ -90,7 +102,11 @@ func Dispatch( packet []byte){
 		return
 	}
 
-	device.FsmState = context.FSM_RECV
-	device.Packet_rx++
-
+	device.DownlinkHandleFunc = func() error {
+		device.FsmState = context.FSM_RECV
+		device.Packet_rx++
+		device.ElapsedTime()
+		return nil
+	}
+	device.DownlinkHandleFunc()
 }
