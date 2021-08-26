@@ -10,9 +10,10 @@ import (
 var ctx DevContext
 //var Gw GwMessage
 
+
 type DevContext struct{
 	DevicesPool  sync.Map
-	Gateway *Gateway
+	Gateway Gateway
 }
 
 func DevicesContext_Self() *DevContext{
@@ -57,6 +58,9 @@ func ( ctx *DevContext) ConfigSocketUDPAddr( ipAddr string, port int)(bool){
 		log.Fatalf("Config Bind IPAddr Error %v", err)
 		return false
 	}
+	fmt.Printf(fmt.Sprintf("%s:%d\n",
+		ipAddr, port))
+
 	ctx.Gateway.Downlink = serverAddr
 
 	return true
@@ -70,6 +74,8 @@ func ( ctx *DevContext) ConfigUplink( ipAddr string, port int)(bool){
 		return false
 	}
 	ctx.Gateway.Uplink = serverAddr
+	fmt.Printf(fmt.Sprintf("%s:%d\n",
+		ipAddr, port))
 
 	return true
 }

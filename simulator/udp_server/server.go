@@ -59,6 +59,7 @@ func RecvMessage(msg recvMessage) {
 }
 
 func Run (){
+
 	downlink := context.DevicesContext_Self().Gateway.Downlink
 	listenerPortDownlink, err := net.ListenUDP("udp", downlink)
 	if err != nil {

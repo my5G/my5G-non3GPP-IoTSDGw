@@ -3,6 +3,7 @@ package udp_server
 import (
 	"fmt"
 	"github.com/my5G/my5G-non3GPP-IoTSDGw/simulator/context"
+	"github.com/sirupsen/logrus"
 	"log"
 	"sync"
 )
@@ -27,13 +28,13 @@ func CycleChannel() int {
 	return channelFlag
 }
 
-func SendChannelMessage(packet []byte, tokenId string, channelID int) {
+func SendChannelMessage(packet []byte, tokenId uint16, channelID int) {
 
 	gateway := context.DevicesContext_Self().Gateway
 
 	message, err := gateway.NewUplinkEventHandler(
 		packet,
-		context.WithProtocolVersion("02"),
+		context.WithProtocolVersion(2),
 		context.WithRandomToken(tokenId),
 		context.WithIndetifier(0),
 		context.WithMac(gateway.MAC),
@@ -85,28 +86,17 @@ func HandleRecvMessage(){
 
 func Dispatch(payload []byte){
 
-	//gateway := context.DevicesContext_Self().Gateway
-	//ok := gateway.Unmarshall(payload)
-	//if !ok {
-	//  log.Fatalf("Error message unmarshall ")
-	//	return
-	//}
-	//fmt.Printf("%s\n", code )
-	// Vem como 04 hexadecimal
-	var id uint16
+	if len(payload) != 4 {
+		log.Fatalf("ACK Recv payload Error")
+	}
+	err := context.DevicesContext_Self().Gateway.DownlinkEventHandler(
+		context.PutPushAckProcotolVersion(payload),
+		context.PutPushAckRandomToken(payload),
+		context.PutPushAckIdentifier(payload),
+		)
 
-	/* Load Device*/
-	device, ok := context.DevicesContext_Self().DeviceLoad(id)
-	if !ok {
-		log.Panicf("Device id not found in recv Dispatch")
-		return
+	if err != nil {
+		logrus.Errorf("Error recv %v", err )
 	}
 
-	device.DownlinkHandleFunc = func() error {
-		device.FsmState = context.FSM_RECV
-		device.Packet_rx++
-		device.ElapsedTime()
-		return nil
-	}
-	device.DownlinkHandleFunc()
 }

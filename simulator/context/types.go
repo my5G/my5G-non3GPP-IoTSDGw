@@ -2,8 +2,10 @@ package context
 
 import (
 	"github.com/brocaar/lorawan"
+	"sync"
 	"time"
 )
+
 
 var  (
 	APPSKEYTestOnly = lorawan.AES128Key{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
@@ -26,7 +28,7 @@ const (
 	DefaultDatr = "SF7BW125"
 	DefaultCodr = "4/5"
 	DefaultRssi = -57
-	DefaultLsnr = 7
+	DefaultLsnr = 8
 )
 const(
 	FSM_IDLE = iota
@@ -48,7 +50,11 @@ const (
 )
 */
 
-type devAddrs []lorawan.DevAddr
+// SafeCounter is safe to use concurrently.
+type SafeCounter struct {
+	mu sync.Mutex
+	DevAddrsFlag int
+}
 
 type DurationSlice []time.Duration
 
@@ -75,12 +81,15 @@ type UpStreamJSON struct {
 
 var idDev uint16
 var devAddrsFlag uint16
+
+var counter *SafeCounter
 //
 // Pega o json avbri o data
 /// Converte do base 64 para hex
 // Alterar os bytes os bites
 func init(){
 	idDev = 0
+	counter = &SafeCounter{}
 }
 
 /*
@@ -96,12 +105,12 @@ func Incremment() (uint16){
 	return idDev
 }
 
-func newDevAddr() lorawan.DevAddr {
-
-	flag := devAddrsFlag + 1
-	if devAddrsFlag > 9 { devAddrsFlag = 0 }
-
-	data := devAddrs{
+func (c * SafeCounter) getAddr() lorawan.DevAddr{
+	defer c.mu.Unlock()
+	c.mu.Lock()
+	c.DevAddrsFlag = c.DevAddrsFlag + 1
+	if c.DevAddrsFlag > 9 { c.DevAddrsFlag = 0 }
+	data := []lorawan.DevAddr{
 		lorawan.DevAddr{0x00,0x00,0x00,0x01}, // DevAddr has 4 bytes
 		lorawan.DevAddr{0x00,0x00,0x00,0x02},
 		lorawan.DevAddr{0x00,0x00,0x00,0x03},
@@ -112,6 +121,6 @@ func newDevAddr() lorawan.DevAddr {
 		lorawan.DevAddr{0x00,0x00,0x00,0x08},
 		lorawan.DevAddr{0x00,0x00,0x00,0x09},
 		lorawan.DevAddr{0x00,0x00,0x00,0x0a},
-	}[flag]
+	}[c.DevAddrsFlag]
 	return data
 }

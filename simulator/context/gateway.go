@@ -3,11 +3,13 @@ package context
 import (
 	//"bytes"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"github.com/pkg/errors"
+	"log"
 	"sync"
-
 	//"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 	//	"log"
@@ -16,16 +18,6 @@ import (
 
 // GatewayOption is the interface for a gateway option.
 //type GatewayOption func(*Gateway) error
-
-type PushOption func(data *PushData) error
-
-type PushData struct {
-	protocolVersion []byte
-	randomToken []byte
-	Indentifier  uint8
-	mac []byte
-	upData []byte
-}
 
 type Gateway struct {
 	Downlink   *net.UDPAddr
@@ -36,23 +28,85 @@ type Gateway struct {
 	upMessageMutex sync.Mutex
 }
 
+
+type PushAckOption func(data *PushAck) error
+
+type PushAck struct {
+	ProtocolVersion uint8
+	RandomToken   uint16
+	Identifier uint8
+}
+
+func PutPushAckProcotolVersion (payload []byte) PushAckOption {
+	return func(p *PushAck) (error){
+		if len(payload) < 1 {
+			return errors.New("PUSH Ack Protocol Version error, length of byte array less than one byte ")
+		}
+		value := payload[0]
+		p.ProtocolVersion = value
+		return nil
+	}
+}
+
+func PutPushAckRandomToken (payload []byte) PushAckOption {
+	return func(p *PushAck) (error){
+		if len(payload) != 4 {
+			return errors.New(fmt.Sprintf(" Error protocol Random Token %b \n", payload))
+		}
+		value := payload[1:3]
+		u := binary.BigEndian.Uint16(value)
+		p.RandomToken = u
+		return nil
+	}
+}
+
+func PutPushAckIdentifier (payload []byte) PushAckOption {
+	return func(p *PushAck) (error){
+		value := payload[3]
+
+		switch uint8(value) {
+		case 4:
+			p.Identifier = 4
+		default:
+			return errors.New(fmt.Sprintf("Error identifier protocol %d \n", value ))
+		}
+		return nil
+	}
+}
+
+type PushOption func(data *PushData) error
+
+type PushData struct {
+	protocolVersion byte
+	randomToken []byte
+	Indentifier  byte
+	mac []byte
+	upData []byte
+}
+
 func (p *PushData) Join() ([]byte){
 	frame := make([]byte, 0)
-	frame = append(p.protocolVersion, frame...)
-	frame = append(p.randomToken, frame...)
-	frame = append([]byte{p.Indentifier}, frame...)
-	frame = append(p.mac, frame...)
 	frame = append(p.upData, frame...)
+	frame = append(p.mac, frame...)
+	frame = append([]byte{p.Indentifier}, frame...)
+	frame = append(p.randomToken, frame...)
+	frame = append([]byte{p.protocolVersion}, frame...)
+
+
+	str := hex.EncodeToString(frame)
+	fmt.Printf("****************************************************************************************************************** \n\n", str)
+	fmt.Printf("ENcoding data %s \n\n", str)
 	return frame
 }
 
-func WithProtocolVersion( version string) PushOption{
+func WithProtocolVersion( version uint8) PushOption{
 	return func(p *PushData) error {
 
 		logrus.WithFields( logrus.Fields{
 			"Protocol Version": version,
 		}).Info("Message Push Option Packet ")
 
+		/*
 		data, err := hex.DecodeString(version)
 		if err != nil {
 			logrus.WithFields(
@@ -60,30 +114,32 @@ func WithProtocolVersion( version string) PushOption{
 					"Version" : data,
 				}).Error("Hexadecimal converter ")
 			return errors.Wrap(err, "Error paser protocol version to hexcode byte array ")
-		}
+		}*/
 
-		p.protocolVersion = data
+		p.protocolVersion = version
 		return nil
 	}
 }
 
-func WithRandomToken(token string) PushOption{
+func WithRandomToken(token uint16) PushOption{
 	return func(p *PushData) error {
 
 		logrus.WithFields( logrus.Fields{
 			"Random Token": token,
 		}).Info("Message Push Option Packet ")
 
-		data, err := hex.DecodeString(token)
-		if err != nil {
-			logrus.WithFields(
-				logrus.Fields{
-					"tokenError" : data,
-				}).Error("Hexadecimal converter ")
-			return errors.Wrap(err, "Error parser token to hexcode byte array ")
-		}
 
-		p.randomToken = data
+		//data, err := hex.DecodeString(token)
+		//if err != nil {
+		//	logrus.WithFields(
+		//		logrus.Fields{
+		//			"tokenError" : data,
+		//		}).Error("Hexadecimal converter ")
+		//	return errors.Wrap(err, "Error parser token to hexcode byte array ")
+		//}
+		b := make([]byte, 2)
+		binary.BigEndian.PutUint16(b, token)
+		p.randomToken = b
 		return nil
 	}
 }
@@ -98,7 +154,7 @@ func WithIndetifier( id uint8 ) PushOption{
 	}
 }
 
-func WithMac( mac string) PushOption{
+func WithMac( mac  string) PushOption{
 	return func(p *PushData) error {
 
 		logrus.WithFields( logrus.Fields{
@@ -123,9 +179,11 @@ func WithJsonObject( uplink UpStreamJSON) PushOption{
 
 	return func(g *PushData) error {
 
+
 		logrus.WithFields( logrus.Fields{
 			"Json message": uplink,
 		}).Info("Message Push Option Packet ")
+
 
 		marshallCode, err := json.Marshal(uplink)
 		if err != nil {
@@ -158,6 +216,7 @@ func (g *Gateway) NewUplinkEventHandler(loraRFPayload []byte, opts ...PushOption
 		Lsnr: DefaultLsnr,
 	}
 
+
 	data := base64.StdEncoding.EncodeToString(loraRFPayload)
 	upJson.Size = uint16( len(loraRFPayload) )
 	upJson.Data = data
@@ -177,9 +236,38 @@ func (g *Gateway) NewUplinkEventHandler(loraRFPayload []byte, opts ...PushOption
 		return nil, err
 	}
 
+	//fmt.Printf("%b \n", pushData.Join())
 	return pushData.Join(), nil
 	//Mount bytes message
 }
 
-//func (g *Gateway) downlinkEventHandler(c mqtt.Client, msg mqtt.Message) {
-//}
+func (g *Gateway) DownlinkEventHandler(opts ...PushAckOption) (error) {
+
+	pushAck := &PushAck{}
+
+	for _, o := range opts{
+		if err := o(pushAck); err != nil  {
+			return err
+		}
+	}
+
+	var id uint16
+
+	/* Load Device*/
+	id = pushAck.RandomToken
+	device, ok := DevicesContext_Self().DeviceLoad(id)
+	if !ok {
+		log.Fatalf("Device id not found in recv Dispatch")
+		return errors.Errorf("Device id not found in recv Dispatch")
+	}
+
+	device.DownlinkHandleFunc = func() error {
+		device.Packet_rx++
+		device.ElapsedTime()
+		device.FsmState = FSM_RECV
+		return nil
+	}
+	device.DownlinkHandleFunc()
+
+	return nil
+}

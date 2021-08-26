@@ -1,6 +1,7 @@
 package main
 
 import (
+    "encoding/hex"
     "fmt"
     "github.com/my5G/my5G-non3GPP-IoTSDGw/simulator/context"
     "github.com/my5G/my5G-non3GPP-IoTSDGw/simulator/udp_server"
@@ -75,6 +76,8 @@ func checkError(err error) {
 
 func Initialize(){
 
+    context.DevicesContext_Self().Gateway.MAC = "0000000000000001"
+
     //make new  Socker Port
     ok :=context.DevicesContext_Self().ConfigSocketUDPAddr(config.ipv4,config.portDown)
     if !ok {
@@ -83,7 +86,7 @@ func Initialize(){
     }
 
     //make new  Socker Port
-    ok =context.DevicesContext_Self().ConfigUplink(config.ipv4,config.portUp)
+    ok = context.DevicesContext_Self().ConfigUplink(config.ipv4,config.portUp)
     if !ok {
         ErrorLogger.Println("Socket Bind Up  Error")
         return
@@ -109,16 +112,20 @@ func runDevices(i int, w *sync.WaitGroup){
         os.Exit(0)
     }
 
+    str := hex.EncodeToString([]byte{device.DevAddr[0],device.DevAddr[1],device.DevAddr[2],device.DevAddr[3]} )
+    InfoLogger.Printf("************ devId %s DevADDr %s \n\n",device.GetDevID() , str )
+
     for flag := 0; flag < config.packetPerDevices; flag++ {
 
-        device.SetMessagePayload(fmt.Sprintf("Hello Device %d ", device.DevId))
+
+        device.SetMessagePayload(fmt.Sprintf("hello dev %d", device.DevId))
         phyLoRaPayload, ok := device.Marshall()
         if !ok {
             panic("Error msg encode Device #{flag} and packet #{flag}")
             return
         }
 
-        fmt.Printf("%s\n\n\n", phyLoRaPayload)
+       // fmt.Printf("%s\n\n\n", phyLoRaPayload)
 
         channelId := udp_server.CycleChannel()
         device.FsmState = context.FSM_SEND
@@ -147,7 +154,7 @@ func runDevices(i int, w *sync.WaitGroup){
         select {
         case <-done:
             device.FsmState = context.FSM_IDLE
-        case <-time.After(5):
+        case <-time.After(1 * time.Minute):
             device.FsmState = context.FSM_IDLE
             done <- false
         }
@@ -198,11 +205,11 @@ func main(){
     }
 
     if config.numDevices  <= 0 {
-        config.numDevices = 1 // Config set default port lorawan bridge
+        config.numDevices = 1000 // Config set default port lorawan bridge
     }
 
     if config.packetPerDevices <=  0 {
-        config.packetPerDevices = 1// Config set default port lorawan bridge
+        config.packetPerDevices = 100// Config set default port lorawan bridge
     }
 
     Initialize()

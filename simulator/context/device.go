@@ -1,15 +1,12 @@
 package context
 
 import (
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"github.com/brocaar/lorawan"
 	"github.com/sirupsen/logrus"
 	"log"
 	"time"
 )
-
 
 type Device struct {
 	DevId uint16
@@ -40,6 +37,8 @@ type Device struct {
 	// Payload (plaintext) which the device sends as uplink.
 	payload []byte
 	DownlinkHandleFunc func() error
+
+
 }
 
 func (d *Device) Marshall() ([]byte, bool){
@@ -48,7 +47,6 @@ func (d *Device) Marshall() ([]byte, bool){
 	if !ok {
 		log.Fatalf("Error Marshall Phy Lora frame ")
 	}
-
 	payload, err := phyLoRa.MarshalBinary()
 	if err != nil {
 		log.Fatalf("%v", errors.New("Error marshall binary  device Data"))
@@ -59,13 +57,14 @@ func (d *Device) Marshall() ([]byte, bool){
 
 func (device *Device) init( id uint16){
 	device.DevId = id
-	device.DevAddr = newDevAddr()
+	device.DevAddr = counter.getAddr()
 }
 
-func (device *Device) GetDevID() (string) {
-	b := make([]byte, 2)
-	binary.BigEndian.PutUint16(b, device.DevId)
-	return hex.EncodeToString(b)
+func (device *Device) GetDevID() (uint16) {
+	//b := make([]byte, 2)
+	//binary.BigEndian.PutUint16(b, device.DevId)
+	//return hex.EncodeToString(b)
+	return device.DevId
 }
 
 func (device *Device) SetMessagePayload( msg string ){
