@@ -92,10 +92,9 @@ func (p *PushData) Join() ([]byte){
 	frame = append(p.randomToken, frame...)
 	frame = append([]byte{p.protocolVersion}, frame...)
 
-
-	str := hex.EncodeToString(frame)
-	fmt.Printf("****************************************************************************************************************** \n\n", str)
-	fmt.Printf("ENcoding data %s \n\n", str)
+	//str := hex.EncodeToString(frame)
+	//fmt.Printf("****************************************************************************************************************** \n\n", str)
+	//fmt.Printf("ENcoding data %s \n\n", str)
 	return frame
 }
 
@@ -268,6 +267,8 @@ func (g *Gateway) DownlinkEventHandler(opts ...PushAckOption) (error) {
 		return nil
 	}
 	device.DownlinkHandleFunc()
+
+	DevicesContext_Self().Stores.Store(device.Info())
 
 	return nil
 }

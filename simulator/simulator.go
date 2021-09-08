@@ -1,7 +1,6 @@
 package main
 
 import (
-    "encoding/hex"
     "fmt"
     "github.com/my5G/my5G-non3GPP-IoTSDGw/simulator/context"
     "github.com/my5G/my5G-non3GPP-IoTSDGw/simulator/udp_server"
@@ -25,6 +24,7 @@ var (
     config *Config
     wg sync.WaitGroup
     now = time.Now
+
 )
 
 var commandsCLi = []cli.Flag{
@@ -111,9 +111,8 @@ func runDevices(i int, w *sync.WaitGroup){
         ErrorLogger.Println("Device id not Found")
         os.Exit(0)
     }
+    device.Confirmed = true
 
-    str := hex.EncodeToString([]byte{device.DevAddr[0],device.DevAddr[1],device.DevAddr[2],device.DevAddr[3]} )
-    InfoLogger.Printf("************ devId %s DevADDr %s \n\n",device.GetDevID() , str )
 
     for flag := 0; flag < config.packetPerDevices; flag++ {
 

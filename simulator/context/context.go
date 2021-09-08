@@ -2,6 +2,7 @@ package context
 
 import (
 	"fmt"
+	"github.com/my5G/my5G-non3GPP-IoTSDGw/simulator/benchmark "
 	"log"
 	"net"
 	"sync"
@@ -9,11 +10,14 @@ import (
 
 var ctx DevContext
 //var Gw GwMessage
-
-
 type DevContext struct{
 	DevicesPool  sync.Map
 	Gateway Gateway
+	Stores  benchmark.Metrics
+}
+
+func ( d *DevContext) init (){
+	d.Stores = benchmark.Metrics{}
 }
 
 func DevicesContext_Self() *DevContext{

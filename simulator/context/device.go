@@ -2,6 +2,7 @@ package context
 
 import (
 	"errors"
+	"fmt"
 	"github.com/brocaar/lorawan"
 	"github.com/sirupsen/logrus"
 	"log"
@@ -16,7 +17,7 @@ type Device struct {
 	Durations DurationSlice
 	Start time.Time
 	FsmState int
-	confirmed bool
+	Confirmed bool
 	//devEUI lorawan.EUI64
 	// AppKey.
 	//appKey lorawan.AES128Key
@@ -37,7 +38,6 @@ type Device struct {
 	// Payload (plaintext) which the device sends as uplink.
 	payload []byte
 	DownlinkHandleFunc func() error
-
 
 }
 
@@ -85,7 +85,7 @@ func (device *Device) ElapsedTime(){
 func (d *Device) UplinkData() (lorawan.PHYPayload, bool) {
 
 	mType := lorawan.UnconfirmedDataUp
-	if d.confirmed {
+	if d.Confirmed {
 		mType = lorawan.ConfirmedDataUp
 	}
 
@@ -129,6 +129,16 @@ func (d *Device) UplinkData() (lorawan.PHYPayload, bool) {
 	d.fCntUp++
 
 	return phy, true
+}
+
+func (d *Device) Info() []string {
+	return []string{
+		fmt.Sprintf("%d", d.DevId),
+		fmt.Sprintf("%d", d.Packet_rx),
+		fmt.Sprintf("%d", d.Packet_tx),
+		fmt.Sprintf("%b", true),
+		fmt.Sprintf("", d.Durations[d.Packet_tx]),
+	}
 }
 
 func CreateDevicesForSimulate(devicesLen int){
