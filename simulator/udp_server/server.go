@@ -1,8 +1,6 @@
 package udp_server
 
 import (
-	"bufio"
-	"bytes"
 	"github.com/my5G/my5G-non3GPP-IoTSDGw/simulator/context"
 	"log"
 	"net"
@@ -75,44 +73,54 @@ func Run (){
 	}
 
 	//Maybe syn all go routines
-	go reader (ChannelIDRecv, listenerPortDownlink)
-	go sender (ChannelID1, dialUplistenerPort)
-	go sender (ChannelID2, dialUplistenerPort)
-	go sender (ChannelID3, dialUplistenerPort)
-	go sender (ChannelID4, dialUplistenerPort)
-	go sender (ChannelID5, dialUplistenerPort)
-	go sender (ChannelID6, dialUplistenerPort)
-	go sender (ChannelID7, dialUplistenerPort)
-	go sender (ChannelID8, dialUplistenerPort)
+	go reader(ChannelIDRecv, listenerPortDownlink)
+	go sender(ChannelID1, dialUplistenerPort)
+	go sender(ChannelID2, dialUplistenerPort)
+	go sender(ChannelID3, dialUplistenerPort)
+	go sender(ChannelID4, dialUplistenerPort)
+	go sender(ChannelID5, dialUplistenerPort)
+	go sender(ChannelID6, dialUplistenerPort)
+	go sender(ChannelID7, dialUplistenerPort)
+	go sender(ChannelID8, dialUplistenerPort)
 
 }
 
+func readerDispatch(buf []byte, remoteAddr *net.UDPAddr){
+
+	msg := recvMessage{
+		remoteAddr.String(),
+		buf,
+		len(buf),
+	}
+
+	RecvMessage(msg)
+}
+
 func reader(chanId int , conn *net.UDPConn){
-	reader := bufio.NewReader(conn)
-	var buffer bytes.Buffer
+	defer conn.Close()
 
 	if chanId != ChannelIDRecv {
 		log.Fatal("Channel ID out of range Reader")
 		return
 	}
 
-	for {
-			n , err := buffer.ReadFrom(reader)
-			if err != nil {
-				log.Fatalf("Read from UDP failed: %+v", err)
-				return
-			}
-			if n <= 0 {
-				log.Fatalf("Read from UDP failed: %+v", err)
-				return
-			}
+	go HandleRecvMessage()
 
-			msg := recvMessage {
-			conn.RemoteAddr().String(),
-				buffer.Bytes(),
-			len(buffer.Bytes()),
+	buf := make([]byte, 65535)
+
+	for {
+		n, remoteAddr, err := conn.ReadFromUDP(buf)
+		if err != nil {
+			log.Fatalf("Read from UDP failed: %+v", err)
 		}
-		RecvMessage(msg)
+
+		if n <= 0 {
+			log.Fatalf("Read from UDP failed: %+v", err)
+		} else {
+
+			go readerDispatch(buf[:n], remoteAddr)
+
+		}
 	}
 }
 

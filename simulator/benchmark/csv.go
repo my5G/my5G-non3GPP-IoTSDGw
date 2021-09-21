@@ -11,10 +11,10 @@ import (
 
 type Metrics struct {
 	devId string
-	packet_tx string
-	packet_rx string
+	msgType string
+	packet_seq string
 	recv  string
-	timeDuration string
+	time string
 
 	W *csv.Writer
 	F *os.File
@@ -22,15 +22,15 @@ type Metrics struct {
 	syncWrite sync.Mutex
 }
 
-func (h *Metrics) init(){
+func (h *Metrics) Init(){
 
-	h.devId = "DEvID "
-	h.packet_tx = "PacketTx"
-	h.packet_rx = "PacketRx"
-	h.recv =  "Recv"
-	h.timeDuration = "Timestamp"
+	h.devId = "DevID "
+	h.msgType  = "type"
+	h.packet_seq = "Seq"
+	h.recv = "recv"
+	h.time = "Timestamp"
 
-	f, err := os.Create(fmt.Sprintf("LoRaIOTSDGW-Simulator-%s", time.Now().Format("2006.01.02 15:04:05") ))
+	f, err := os.Create(fmt.Sprintf("LoRaIOTSDGW-Simulator-%s.csv", time.Now().Format("2006.01.02 15:04:05") ))
 	if err != nil {
 		log.Fatalf("Open Filer to csv writer error to open")
 	}
@@ -38,7 +38,8 @@ func (h *Metrics) init(){
 	h.F = f
 	h.W = csv.NewWriter(f)
 	//defer h.Write.Flush()
-	err = h.W.Write([]string{h.devId,h.packet_tx, h.packet_rx, h.timeDuration})
+
+	err = h.W.Write([]string{h.devId, h.msgType, h.packet_seq, h.recv, h.time})
 	if err != nil {
 		log.Fatalln("error writing header record to file", err)
 		return
@@ -47,18 +48,20 @@ func (h *Metrics) init(){
 }
 
 func (h *Metrics) Store(row []string) (error) {
+	defer h.syncWrite.Unlock()
 	h.syncWrite.Lock()
 	err := h.W.Write(row)
 	if err != nil {
 		log.Fatalln("error writing  record to file", err)
 	}
-	h.syncWrite.Unlock()
 
 	return err
 }
 
 func (h *Metrics) Close() {
+
 	h.W.Flush()
+
 	err := h.F.Close()
 	if err != nil {
 		log.Fatalln("error to closed file ", err)

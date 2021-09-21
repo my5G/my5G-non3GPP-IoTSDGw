@@ -1,6 +1,7 @@
 package context
 
 import (
+	"bytes"
 	//"bytes"
 	"encoding/base64"
 	"encoding/binary"
@@ -43,7 +44,13 @@ func PutPushAckProcotolVersion (payload []byte) PushAckOption {
 			return errors.New("PUSH Ack Protocol Version error, length of byte array less than one byte ")
 		}
 		value := payload[0]
-		p.ProtocolVersion = value
+
+		logrus.WithFields( logrus.Fields{
+			"ProtocolVersion": value,
+		}).Info("Message Push ACK Packet ")
+
+
+		p.ProtocolVersion = uint8(value)
 		return nil
 	}
 }
@@ -53,8 +60,22 @@ func PutPushAckRandomToken (payload []byte) PushAckOption {
 		if len(payload) != 4 {
 			return errors.New(fmt.Sprintf(" Error protocol Random Token %b \n", payload))
 		}
-		value := payload[1:3]
-		u := binary.BigEndian.Uint16(value)
+
+		value := bytes.NewReader( payload[1:3] )
+		//u := binary.BigEndian.Uint16(value)
+
+		var u uint16
+		binary.Read(value, binary.BigEndian, &u)
+
+		fmt.Printf(" ************ DEvID = %d \n", u)
+
+		logrus.WithFields( logrus.Fields{
+			"ID Token": u,
+		}).Info("Message Push ACK Packet ")
+
+
+
+
 		p.RandomToken = u
 		return nil
 	}
@@ -64,9 +85,14 @@ func PutPushAckIdentifier (payload []byte) PushAckOption {
 	return func(p *PushAck) (error){
 		value := payload[3]
 
-		switch uint8(value) {
-		case 4:
-			p.Identifier = 4
+		logrus.WithFields( logrus.Fields{
+			"Identifier": value,
+			}).Info("Message Push ACK Packet ")
+
+
+		switch value {
+		case 1:
+			p.Identifier = 1
 		default:
 			return errors.New(fmt.Sprintf("Error identifier protocol %d \n", value ))
 		}
@@ -91,19 +117,15 @@ func (p *PushData) Join() ([]byte){
 	frame = append([]byte{p.Indentifier}, frame...)
 	frame = append(p.randomToken, frame...)
 	frame = append([]byte{p.protocolVersion}, frame...)
-
-	//str := hex.EncodeToString(frame)
-	//fmt.Printf("****************************************************************************************************************** \n\n", str)
-	//fmt.Printf("ENcoding data %s \n\n", str)
 	return frame
 }
 
-func WithProtocolVersion( version uint8) PushOption{
+func WithProtocolVersion( version uint8) PushOption {
 	return func(p *PushData) error {
 
-		logrus.WithFields( logrus.Fields{
-			"Protocol Version": version,
-		}).Info("Message Push Option Packet ")
+		//logrus.WithFields( logrus.Fields{
+		//	"Protocol Version": version,
+		//}).Info("Message Push Option Packet ")
 
 		/*
 		data, err := hex.DecodeString(version)
@@ -120,12 +142,12 @@ func WithProtocolVersion( version uint8) PushOption{
 	}
 }
 
-func WithRandomToken(token uint16) PushOption{
+func WithRandomToken(token uint16) PushOption {
 	return func(p *PushData) error {
 
-		logrus.WithFields( logrus.Fields{
-			"Random Token": token,
-		}).Info("Message Push Option Packet ")
+		//logrus.WithFields( logrus.Fields{
+		//	"Random Token": token,
+		//}).Info("Message Push Option Packet ")
 
 
 		//data, err := hex.DecodeString(token)
@@ -143,23 +165,23 @@ func WithRandomToken(token uint16) PushOption{
 	}
 }
 
-func WithIndetifier( id uint8 ) PushOption{
+func WithIndetifier( id uint8 ) PushOption {
 	return func(p *PushData) error {
-		logrus.WithFields( logrus.Fields{
-			"Indentifier": id,
-		}).Info("Message Push Option Packet ")
+		//logrus.WithFields( logrus.Fields{
+		//	"Indentifier": id,
+		//}).Info("Message Push Option Packet ")
 		p.Indentifier = id
 		return nil
 	}
 }
 
-func WithMac( mac  string) PushOption{
+func WithMac( mac  string) PushOption {
 	return func(p *PushData) error {
 
-		logrus.WithFields( logrus.Fields{
-			"Mac address": mac,
+		//logrus.WithFields( logrus.Fields{
+		//	"Mac address": mac,
 
-		}).Info("Message Push Option Packet ")
+		//}).Info("Message Push Option Packet ")
 
 		data, err := hex.DecodeString(mac)
 		if err != nil {
@@ -174,14 +196,14 @@ func WithMac( mac  string) PushOption{
 	}
 }
 
-func WithJsonObject( uplink UpStreamJSON) PushOption{
+func WithJsonObject( uplink UpStreamJSON) PushOption {
 
 	return func(g *PushData) error {
 
 
-		logrus.WithFields( logrus.Fields{
-			"Json message": uplink,
-		}).Info("Message Push Option Packet ")
+		//logrus.WithFields( logrus.Fields{
+		//	"Json message": uplink,
+		//}).Info("Message Push Option Packet ")
 
 
 		marshallCode, err := json.Marshal(uplink)
@@ -260,15 +282,19 @@ func (g *Gateway) DownlinkEventHandler(opts ...PushAckOption) (error) {
 		return errors.Errorf("Device id not found in recv Dispatch")
 	}
 
+	if device.FsmState != FSM_WAIT {
+		return errors.New(fmt.Sprintf("FSM = %d ", FSM_WAIT))
+	}
+
 	device.DownlinkHandleFunc = func() error {
 		device.Packet_rx++
+		device.fCntDown++
 		device.ElapsedTime()
 		device.FsmState = FSM_RECV
 		return nil
 	}
 	device.DownlinkHandleFunc()
-
-	DevicesContext_Self().Stores.Store(device.Info())
-
+	DevicesContext_Self().Stores.Store(device.DownLinkInfo(true))
+	device.DoneRecv <- true
 	return nil
 }

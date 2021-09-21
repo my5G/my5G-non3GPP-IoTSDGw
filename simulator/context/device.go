@@ -13,11 +13,11 @@ type Device struct {
 	DevId uint16
 	// BanchMark  variables
 	Packet_tx, Packet_rx uint8
-	PacketLoss int
-	Durations DurationSlice
-	Start time.Time
-	FsmState int
-	Confirmed bool
+	PacketLoss           int
+	Durations            DurationSlice
+	Start                time.Time
+	FsmState             int
+	Confirmed            bool
 	//devEUI lorawan.EUI64
 	// AppKey.
 	//appKey lorawan.AES128Key
@@ -39,6 +39,7 @@ type Device struct {
 	payload []byte
 	DownlinkHandleFunc func() error
 
+	DoneRecv chan bool
 }
 
 func (d *Device) Marshall() ([]byte, bool){
@@ -57,7 +58,9 @@ func (d *Device) Marshall() ([]byte, bool){
 
 func (device *Device) init( id uint16){
 	device.DevId = id
-	device.DevAddr = counter.getAddr()
+	//device.DevAddr = counter.getAddr()
+	device.DevAddr = DevIDtoHEx(id)
+	device.DoneRecv = make(chan bool)
 }
 
 func (device *Device) GetDevID() (uint16) {
@@ -71,14 +74,9 @@ func (device *Device) SetMessagePayload( msg string ){
 	device.payload = []byte(msg)
 }
 func (device *Device) ElapsedTime(){
-
-	if device.FsmState == FSM_RECV {
-		t := time.Now()
-		elapsed := t.Sub(device.Start)
-		device.Durations = append(device.Durations, elapsed)
-	} else {
-		log.Printf("Not Elapsed time ")
-	}
+	t := time.Now()
+	elapsed := t.Sub(device.Start)
+	device.Durations = append(device.Durations, elapsed)
 }
 
 // dataUp sends an data uplink.
@@ -131,13 +129,24 @@ func (d *Device) UplinkData() (lorawan.PHYPayload, bool) {
 	return phy, true
 }
 
-func (d *Device) Info() []string {
+
+func (d *Device)  UpLinkInfo() []string {
 	return []string{
 		fmt.Sprintf("%d", d.DevId),
-		fmt.Sprintf("%d", d.Packet_rx),
+		fmt.Sprintf("%s", "uplink"),
 		fmt.Sprintf("%d", d.Packet_tx),
-		fmt.Sprintf("%b", true),
-		fmt.Sprintf("", d.Durations[d.Packet_tx]),
+		fmt.Sprintf("%t", false),
+		fmt.Sprintf("%s", d.Start.Format("15:04:05")),
+	}
+}
+
+func (d *Device) DownLinkInfo(recv bool ) []string {
+	return []string{
+		fmt.Sprintf("%d", d.DevId),
+		fmt.Sprintf("%s", "downlink"),
+		fmt.Sprintf("%d", d.Packet_rx),
+		fmt.Sprintf("%t", recv),
+		fmt.Sprintf("%f", d.Durations[len(d.Durations) -1].Seconds()),
 	}
 }
 

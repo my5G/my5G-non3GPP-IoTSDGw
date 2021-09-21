@@ -2,7 +2,7 @@ package context
 
 import (
 	"fmt"
-	"github.com/my5G/my5G-non3GPP-IoTSDGw/simulator/benchmark "
+	"github.com/my5G/my5G-non3GPP-IoTSDGw/simulator/benchmark"
 	"log"
 	"net"
 	"sync"
@@ -11,22 +11,23 @@ import (
 var ctx DevContext
 //var Gw GwMessage
 type DevContext struct{
-	DevicesPool  sync.Map
-	Gateway Gateway
-	Stores  benchmark.Metrics
+	DevicesPool sync.Map
+	Gateway     Gateway
+	Stores      benchmark.Metrics
 }
 
-func ( d *DevContext) init (){
-	d.Stores = benchmark.Metrics{}
+func init (){
+	DevicesContext_Self().Stores = benchmark.Metrics{}
+	DevicesContext_Self().Stores.Init()
 }
 
-func DevicesContext_Self() *DevContext{
+func DevicesContext_Self() *DevContext {
 	return &ctx
 }
 
 func ( ctx *DevContext) NewDevice() *Device {
 
-	valueID := Incremment()
+	valueID := counter.Incremment()
 
 	if  valueID < 0  {
 		log.Fatalf("Dev Id code Error")
@@ -38,11 +39,8 @@ func ( ctx *DevContext) NewDevice() *Device {
 	device.nwkSKey = NWKSKEYTestOnly
 	device.appSKey = APPSKEYTestOnly
 	device.fPort = 2 // Make
-	//device.payload = []byte(Message)
 	device.FsmState = FSM_IDLE
-
 	ctx.DevicesPool.Store(valueID, device)
-
 	return device
 }
 
