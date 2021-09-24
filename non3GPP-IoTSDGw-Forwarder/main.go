@@ -1,9 +1,6 @@
 package main
 
 import (
-    "bytes"
-    "encoding/binary"
-    "fmt"
     "github.com/pkg/errors"
     "github.com/urfave/cli"
     "log"
@@ -150,11 +147,11 @@ func StartDownlink(fromBridge *net.UDPConn, toGateway *net.UDPConn ) {
             downlinkCounter++
             actualElipsedTime := now().Sub(starTimeDownload)
 
-            value := bytes.NewReader( buff[:n][1:3] )
+            //value := bytes.NewReader( buff[:n][1:3] )
             //u := binary.BigEndian.Uint16(value)
-            var u uint16
-            binary.Read(value, binary.BigEndian, &u)
-            fmt.Printf("Message : %d \n ", u)
+            //var u uint16
+            //binary.Read(value, binary.BigEndian, &u)
+            //fmt.Printf("Message : %d \n ", u)
 
             metrics.Store( StoreInfo("downlink", downlinkCounter, len(buff[:n]), actualElipsedTime.Seconds() ) )
 

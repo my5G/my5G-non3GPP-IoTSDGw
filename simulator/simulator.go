@@ -76,9 +76,8 @@ func checkError(err error) {
 }
 
 func Random() int{
-    min := 1
-    max := 3
-    return rand.Intn(max - min)
+    max := 50
+    return rand.Intn(max)
 }
 
 func Initialize(){
@@ -115,12 +114,16 @@ func runDevices(i int, w *sync.WaitGroup){
 
     defer w.Done()
 
+    time.Sleep( time.Duration(Random()) * time.Millisecond )
+
     device, ok := context.DevicesContext_Self().DeviceLoad(uint16(i))
     if !ok {
         ErrorLogger.Println("Device id not Found")
         os.Exit(0)
     }
-    device.Confirmed = true
+    device.Confirmed = false
+
+
 
     for flag := 0; flag < config.packetPerDevices; flag++ {
 
@@ -143,7 +146,7 @@ func runDevices(i int, w *sync.WaitGroup){
         device.FsmState = context.FSM_WAIT
 
         select {
-            case <-device.DoneRecv:
+           case <-device.DoneRecv:
                 device.FsmState = context.FSM_IDLE
             case <-time.After(1 * time.Minute):
                 device.FsmState = context.FSM_IDLE
@@ -151,6 +154,8 @@ func runDevices(i int, w *sync.WaitGroup){
     }// End of For
 }
 
+
+// TODO RAnDOM 1 to 9 miliseconds
 func run_simulator(){
     //total_cycle := numPacketPerDev * numDev
 
@@ -159,7 +164,6 @@ func run_simulator(){
     for i := 1; i <= config.numDevices; i++ {
         wg.Add(1)
         go runDevices(i, &wg)
-        time.Sleep( 3 * time.Millisecond )
     }
 }
 
@@ -197,7 +201,7 @@ func main(){
     }
 
     if config.numDevices  <= 0 {
-        config.numDevices = 1000 // Config set default port lorawan bridge
+        config.numDevices = 500 // Config set default port lorawan bridge
     }
 
     if config.packetPerDevices <=  0 {

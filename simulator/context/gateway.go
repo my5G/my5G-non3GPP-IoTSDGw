@@ -45,9 +45,9 @@ func PutPushAckProcotolVersion (payload []byte) PushAckOption {
 		}
 		value := payload[0]
 
-		logrus.WithFields( logrus.Fields{
-			"ProtocolVersion": value,
-		}).Info("Message Push ACK Packet ")
+		//logrus.WithFields( logrus.Fields{
+		//	"ProtocolVersion": value,
+		//}).Info("Message Push ACK Packet ")
 
 
 		p.ProtocolVersion = uint8(value)
@@ -67,14 +67,11 @@ func PutPushAckRandomToken (payload []byte) PushAckOption {
 		var u uint16
 		binary.Read(value, binary.BigEndian, &u)
 
-		fmt.Printf(" ************ DEvID = %d \n", u)
+		//fmt.Printf(" ************ DEvID = %d \n", u)
 
-		logrus.WithFields( logrus.Fields{
-			"ID Token": u,
-		}).Info("Message Push ACK Packet ")
-
-
-
+		//logrus.WithFields( logrus.Fields{
+		//	"ID Token": u,
+		//}).Info("Message Push ACK Packet ")
 
 		p.RandomToken = u
 		return nil
@@ -85,9 +82,9 @@ func PutPushAckIdentifier (payload []byte) PushAckOption {
 	return func(p *PushAck) (error){
 		value := payload[3]
 
-		logrus.WithFields( logrus.Fields{
-			"Identifier": value,
-			}).Info("Message Push ACK Packet ")
+		//logrus.WithFields( logrus.Fields{
+		//	"Identifier": value,
+		//	}).Info("Message Push ACK Packet ")
 
 
 		switch value {
