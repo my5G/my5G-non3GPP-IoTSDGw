@@ -4,7 +4,7 @@ VERSION := $(shell git describe --always |sed -e "s/^v//")
 build:
 	@echo "Compiling source"
 	@mkdir -p build
-	go build $(GO_EXTRA_BUILD_ARGS) -ldflags "-s -w -X main.version=$(VERSION)" -o build/main non3GPP-IoTSDGw-Forwarder/main.go
+	go build $(GO_EXTRA_BUILD_ARGS) -ldflags "-s -w -X main.version=$(VERSION)" -o build/main github.com/my5G/my5G-non3GPP-IoTSDGw/non3GPP-IoTSDGw-Forwarder
 	go build $(GO_EXTRA_BUILD_ARGS) -ldflags "-s -w -X main.version=$(VERSION)" -o build/simulator simulator/simulator.go
 
 clean:

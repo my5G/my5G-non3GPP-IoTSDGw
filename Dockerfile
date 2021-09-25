@@ -11,7 +11,7 @@ RUN mkdir -p $PROJECT_PATH
 WORKDIR $PROJECT_PATH
 COPY .  $PROJECT_PATH
 
-RUN make clean build
+#RUN make clean build
 
 
 WORKDIR $PROJECT_PATH

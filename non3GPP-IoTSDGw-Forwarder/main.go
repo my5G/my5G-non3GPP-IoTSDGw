@@ -214,8 +214,6 @@ func main() {
         config.port = 1700 // Config set default port lorawan bridge
     }
     Run()
-
-
 }
 
 var now = time.Now
