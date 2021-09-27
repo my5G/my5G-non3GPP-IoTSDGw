@@ -16,6 +16,7 @@ type Device struct {
 	PacketLoss           int
 	Durations            DurationSlice
 	Start                time.Time
+	TotalTime 			 float64
 	FsmState             int
 	Confirmed            bool
 	//devEUI lorawan.EUI64
@@ -76,6 +77,7 @@ func (device *Device) SetMessagePayload( msg string ){
 func (device *Device) ElapsedTime(){
 	t := time.Now()
 	elapsed := t.Sub(device.Start)
+	device.TotalTime += elapsed.Seconds()
 	device.Durations = append(device.Durations, elapsed)
 }
 
@@ -129,7 +131,6 @@ func (d *Device) UplinkData() (lorawan.PHYPayload, bool) {
 	return phy, true
 }
 
-
 func (d *Device)  UpLinkInfo() []string {
 	return []string{
 		fmt.Sprintf("%d", d.DevId),
@@ -150,11 +151,28 @@ func (d *Device) DownLinkInfo(recv bool ) []string {
 	}
 }
 
+func (d *Device)  UpLinkInfoResume() []string {
+	return []string{
+		fmt.Sprintf("%d", d.DevId),
+		fmt.Sprintf("%s", "uplink"),
+		fmt.Sprintf("%d", d.Packet_tx),
+		fmt.Sprintf("%f",0.0),
+	}
+}
+
+func (d *Device) DownLinkInfoResume() []string {
+	return []string{
+		fmt.Sprintf("%d", d.DevId),
+		fmt.Sprintf("%s", "downlink"),
+		fmt.Sprintf("%d", d.Packet_rx),
+		fmt.Sprintf("%f", d.TotalTime),
+	}
+}
+
 func CreateDevicesForSimulate(devicesLen int){
 	if devicesLen < 1 {
 		log.Fatalf("Number of devices is not valid")
 	}
-
 	for i := 0; i < devicesLen; i++ {
 		DevicesContext_Self().NewDevice()
 	}

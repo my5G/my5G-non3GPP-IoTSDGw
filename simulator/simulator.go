@@ -123,8 +123,6 @@ func runDevices(i int, w *sync.WaitGroup){
     }
     device.Confirmed = false
 
-
-
     for flag := 0; flag < config.packetPerDevices; flag++ {
 
         device.SetMessagePayload(fmt.Sprintf("hello dev %d packet %d", device.DevId, device.Packet_tx ))
@@ -152,15 +150,15 @@ func runDevices(i int, w *sync.WaitGroup){
                 device.FsmState = context.FSM_IDLE
         }
     }// End of For
-}
 
+    context.DevicesContext_Self().Stores.StoreResume(device.UpLinkInfoResume())
+    context.DevicesContext_Self().Stores.StoreResume(device.DownLinkInfoResume())
+}
 
 // TODO RAnDOM 1 to 9 miliseconds
 func run_simulator(){
     //total_cycle := numPacketPerDev * numDev
-
     //var test bool
-
     for i := 1; i <= config.numDevices; i++ {
         wg.Add(1)
         go runDevices(i, &wg)
@@ -179,6 +177,8 @@ func action(c * cli.Context) error{
 }
 
 func main(){
+    defer context.DevicesContext_Self().Stores.Close()
+
     app := cli.NewApp()
     app.Name = "IoTSDGW LoRa Simulator"
     app.Usage = "Usage: -ipv4 {IOTSdw Forwarder} -port {UDP port}"
@@ -201,16 +201,15 @@ func main(){
     }
 
     if config.numDevices  <= 0 {
-        config.numDevices = 500 // Config set default port lorawan bridge
+        config.numDevices = 5 // Config set default port lorawan bridge
     }
 
     if config.packetPerDevices <=  0 {
-        config.packetPerDevices = 100
+        config.packetPerDevices = 2
         // Config set default port lorawan bridge
     }
 
     Initialize()
     wg.Wait()
 
-    context.DevicesContext_Self().Stores.Close()
 }
