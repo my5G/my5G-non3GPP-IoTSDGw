@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const ROOT = "/metrics"
+
 type Metrics struct {
 	devId string
 	msgType string
@@ -37,7 +39,7 @@ func (h *Metrics) Init(){
 	h.recv = "recv"
 	h.time = "Timestamp"
 
-	f, err := os.Create(fmt.Sprintf("LoRaIOTSDGW-Simulator-%s.csv", time.Now().Format("2006.01.02 15:04:05") ))
+	f, err := os.Create(ROOT + fmt.Sprintf("/LoRaIOTSDGW-Simulator-%s.csv", time.Now().Format("2006.01.02 15:04:05") ))
 	if err != nil {
 		log.Fatalf("Open Filer to csv writer error to open")
 	}
@@ -53,7 +55,7 @@ func (h *Metrics) Init(){
 	}
 
 
-	f2, err := os.Create(fmt.Sprintf("LoRaIOTSDGW-Sim-Resume%s.csv", time.Now().Format("2006.01.02 15:04:05") ))
+	f2, err := os.Create(ROOT + fmt.Sprintf("/LoRaIOTSDGW-Sim-Resume%s.csv", time.Now().Format("2006.01.02 15:04:05") ))
 	if err != nil {
 		log.Fatalf("Open Filer to csv writer error to open")
 	}

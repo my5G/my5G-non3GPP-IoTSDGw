@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const ROOT = "/metrics"
+
 type Metrics struct {
 
 	msgType string
@@ -23,7 +25,7 @@ type Metrics struct {
 }
 
 func (h *Metrics) Init(){
-	f, err := os.Create(fmt.Sprintf("IOTSDGW-Forwarder-%s.csv", time.Now().Format("2006.01.02 15:04:05") ))
+	f, err := os.Create(fmt.Sprintf(ROOT+"/IOTSDGW-Forwarder-%s.csv", time.Now().Format("2006.01.02 15:04:05") ))
 	if err != nil {
 		log.Fatalf("Open Filer to csv writer error to open")
 	}
