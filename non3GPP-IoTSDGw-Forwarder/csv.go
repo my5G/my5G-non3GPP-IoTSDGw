@@ -35,6 +35,7 @@ func (h *Metrics) Init(){
 
 	h.F = f
 	h.W = csv.NewWriter(f)
+
 	//defer h.Write.Flush()
 
 	err = h.W.Write( []string{ "type", "Seq", "size", "Timestamp" })
@@ -57,6 +58,7 @@ func (h *Metrics) Store(row []string) (error) {
 	defer h.syncWrite.Unlock()
 	h.syncWrite.Lock()
 	err := h.W.Write(row)
+	h.W.Flush()
 	if err != nil {
 		log.Fatalln("error writing  record to file", err)
 	}

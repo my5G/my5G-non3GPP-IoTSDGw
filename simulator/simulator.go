@@ -201,11 +201,11 @@ func main(){
     }
 
     if config.numDevices  <= 0 {
-        config.numDevices = 1000 // Config set default port lorawan bridge
+        config.numDevices = 1 // Config set default port lorawan bridge
     }
 
     if config.packetPerDevices <=  0 {
-        config.packetPerDevices = 1000
+        config.packetPerDevices = 1
         // Config set default port lorawan bridge
     }
 
