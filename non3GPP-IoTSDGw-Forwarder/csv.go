@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"github.com/google/uuid"
 	"log"
 	"os"
 	"sync"
@@ -25,7 +26,9 @@ type Metrics struct {
 }
 
 func (h *Metrics) Init(){
-	f, err := os.Create(fmt.Sprintf(ROOT+"/IOTSDGW-Forwarder-%s.csv", time.Now().Format("2006.01.02 15:04:05") ))
+
+	id := uuid.New()
+	f, err := os.Create(fmt.Sprintf(ROOT+"/IOTSDGW-Forwarder-%s.csv", id.String() ))
 	if err != nil {
 		log.Fatalf("Open Filer to csv writer error to open")
 	}

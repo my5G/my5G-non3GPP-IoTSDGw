@@ -146,7 +146,7 @@ func runDevices(i int, w *sync.WaitGroup){
         select {
            case <-device.DoneRecv:
                 device.FsmState = context.FSM_IDLE
-            case <-time.After(1 * time.Minute):
+            case <-time.After(2 * time.Second):
                 device.FsmState = context.FSM_IDLE
         }
     }// End of For
@@ -201,11 +201,11 @@ func main(){
     }
 
     if config.numDevices  <= 0 {
-        config.numDevices = 5 // Config set default port lorawan bridge
+        config.numDevices = 1000 // Config set default port lorawan bridge
     }
 
     if config.packetPerDevices <=  0 {
-        config.packetPerDevices = 2
+        config.packetPerDevices = 1000
         // Config set default port lorawan bridge
     }
 

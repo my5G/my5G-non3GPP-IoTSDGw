@@ -3,6 +3,7 @@ package benchmark
 import (
 	"encoding/csv"
 	"fmt"
+	"github.com/google/uuid"
 	"log"
 	"os"
 	"sync"
@@ -33,13 +34,16 @@ type Metrics struct {
 
 func (h *Metrics) Init(){
 
+	id := uuid.New()
+
+
 	h.devId = "DevID "
 	h.msgType  = "type"
 	h.packet_seq = "Seq"
 	h.recv = "recv"
 	h.time = "Timestamp"
 
-	f, err := os.Create(ROOT + fmt.Sprintf("/LoRaIOTSDGW-Simulator-%s.csv", time.Now().Format("2006.01.02 15:04:05") ))
+	f, err := os.Create(ROOT + fmt.Sprintf("/LoRaIOTSDGW-Simulator-%s.csv", id.String() ))
 	if err != nil {
 		log.Fatalf("Open Filer to csv writer error to open")
 	}

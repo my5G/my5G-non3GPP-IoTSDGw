@@ -141,11 +141,11 @@ func WithProtocolVersion( version uint8) PushOption {
 
 func WithRandomToken(token uint16) PushOption {
 	return func(p *PushData) error {
-
-		//logrus.WithFields( logrus.Fields{
-		//	"Random Token": token,
-		//}).Info("Message Push Option Packet ")
-
+        /*
+		logrus.WithFields( logrus.Fields{
+			"Random Token": token,
+		}).Info("Message Push Option Packet ")
+        */
 
 		//data, err := hex.DecodeString(token)
 		//if err != nil {
@@ -164,9 +164,12 @@ func WithRandomToken(token uint16) PushOption {
 
 func WithIndetifier( id uint8 ) PushOption {
 	return func(p *PushData) error {
-		//logrus.WithFields( logrus.Fields{
-		//	"Indentifier": id,
-		//}).Info("Message Push Option Packet ")
+		/*
+		logrus.WithFields( logrus.Fields{
+			"Indentifier": id,
+		}).Info("Message Push Option Packet ")
+
+		 */
 		p.Indentifier = id
 		return nil
 	}
@@ -175,10 +178,12 @@ func WithIndetifier( id uint8 ) PushOption {
 func WithMac( mac  string) PushOption {
 	return func(p *PushData) error {
 
-		//logrus.WithFields( logrus.Fields{
-		//	"Mac address": mac,
+		/*
+		logrus.WithFields( logrus.Fields{
+			"Mac address": mac,
 
-		//}).Info("Message Push Option Packet ")
+		}).Info("Message Push Option Packet ")
+		*/
 
 		data, err := hex.DecodeString(mac)
 		if err != nil {
@@ -198,10 +203,10 @@ func WithJsonObject( uplink UpStreamJSON) PushOption {
 	return func(g *PushData) error {
 
 
-		//logrus.WithFields( logrus.Fields{
-		//	"Json message": uplink,
-		//}).Info("Message Push Option Packet ")
-
+		/*logrus.WithFields( logrus.Fields{
+			"Json message": uplink,
+		}).Info("Message Push Option Packet ")
+         */
 
 		marshallCode, err := json.Marshal(uplink)
 		if err != nil {
@@ -280,7 +285,8 @@ func (g *Gateway) DownlinkEventHandler(opts ...PushAckOption) (error) {
 	}
 
 	if device.FsmState != FSM_WAIT {
-		return errors.New(fmt.Sprintf("FSM = %d ", FSM_WAIT))
+		fmt.Printf("State of Device %d \n\n", device.FsmState)
+		return errors.New(fmt.Sprintf("FSM = %d ", id))
 	}
 
 	device.DownlinkHandleFunc = func() error {
